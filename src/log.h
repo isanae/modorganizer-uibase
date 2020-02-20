@@ -47,6 +47,18 @@ struct QDLLEXPORT converter<std::wstring>
 };
 
 template <>
+struct QDLLEXPORT converter<std::wstring_view>
+{
+  static std::string convert(const std::wstring_view& s);
+};
+
+template <>
+struct QDLLEXPORT converter<std::filesystem::path>
+{
+  static std::string convert(const std::filesystem::path& p);
+};
+
+template <>
 struct QDLLEXPORT converter<QString>
 {
   static std::string convert(const QString& s);

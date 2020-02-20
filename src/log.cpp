@@ -363,6 +363,16 @@ std::string converter<std::wstring>::convert(const std::wstring& s)
   return QString::fromStdWString(s).toStdString();
 }
 
+std::string converter<std::wstring_view>::convert(const std::wstring_view& s)
+{
+  return QString::fromWCharArray(s.data(), static_cast<int>(s.size())).toStdString();
+}
+
+std::string converter<std::filesystem::path>::convert(const std::filesystem::path& p)
+{
+  return p.generic_string();
+}
+
 std::string converter<QString>::convert(const QString& s)
 {
   return s.toStdString();
