@@ -369,36 +369,65 @@ void LogShellFailure(
   const wchar_t* operation, const wchar_t* file, const wchar_t* params,
   DWORD error)
 {
-  QString s;
+  QStringList s;
 
   if (operation) {
-    s += " " + QString::fromWCharArray(operation);
+    s.push_back(QString::fromWCharArray(operation));
   }
 
   if (file) {
-    s += " " + QString::fromWCharArray(file);
+    s.push_back(QString::fromWCharArray(file));
   }
 
   if (params) {
-    s += " " + QString::fromWCharArray(params);
+    s.push_back(QString::fromWCharArray(params));
   }
 
-  log::error("failed to invoke '{}': {}", s, formatSystemMessage(error));
+  log::error("failed to invoke '{}': {}", s.join(" "), formatSystemMessage(error));
 }
 
 Result ShellExecuteWrapper(
   const wchar_t* operation, const wchar_t* file, const wchar_t* params)
 {
   SHELLEXECUTEINFOW info = {};
-
   info.cbSize = sizeof(info);
-  info.fMask = SEE_MASK_FLAG_NO_UI | SEE_MASK_NOCLOSEPROCESS;
+
+  // SEE_MASK_INVOKEIDLIST is necessary for some files that do not have
+  // verbs defined at all, such as DLLs or some unassociated files
+  //
+  // Open() passes null for the operation, which has this behaviour:
+  //   1) use the default verb if it exists, or
+  //   2) use the "open" verb if it exists, or
+  //   3) use the first verb listed in the registry, or
+  //   4) fail
+  //
+  // 4) used to be different pre-vista: it would show the openwith dialog, but
+  // this seems to have been removed at some point (or bugged, it's not clear)
+  //
+  // however, passing SEE_MASK_INVOKEIDLIST seems to restore the old behaviour
+  // of showing the openwith dialog, as well as allowing for dynamic verbs to
+  // be handled, which is a good thing
+  //
+  // without that flag, the shell gets the list of available verbs from
+  // registry, which is a static list; with the flag, it constructs an
+  // IContextMenu and uses that, which allows for shell extensions to run and
+  // provide dynamic verbs
+  //
+  // so whether the openwith window should open without the flag is unclear:
+  // it used to do it in Windows 7, but it doesn't anymore; providing the flag
+  // fixes that and provides better verbs in rare cases
+
+  info.fMask =
+    SEE_MASK_FLAG_NO_UI |      // disables system error dialog
+    SEE_MASK_NOCLOSEPROCESS |  // keeps process handle open
+    SEE_MASK_INVOKEIDLIST;     // use shortcut menu to get verbs
+
   info.lpVerb = operation;
   info.lpFile = file;
   info.lpParameters = params;
   info.nShow = SW_SHOWNORMAL;
 
-  const auto r = ::ShellExecuteExW(&info);
+  const BOOL r = ::ShellExecuteExW(&info);
 
   if (!r)
   {
@@ -427,7 +456,7 @@ Result ExploreFileInDirectory(const QFileInfo& info)
   const auto params = "/select,\"" + path + "\"";
   const auto ws_params = params.toStdWString();
 
-  return ShellExecuteWrapper(nullptr, L"explorer", ws_params.c_str());
+  return ShellExecuteWrapper(nullptr, L"explore", ws_params.c_str());
 }
 
 
@@ -462,13 +491,14 @@ Result Explore(const QDir& dir)
 Result Open(const QString& path)
 {
   const auto ws_path = path.toStdWString();
-  return ShellExecuteWrapper(L"open", ws_path.c_str(), nullptr);
+
+  // note null for verb, see ShellExecuteWrapper()
+  return ShellExecuteWrapper(nullptr, ws_path.c_str(), nullptr);
 }
 
 Result Open(const QUrl& url)
 {
-  const auto ws_url = url.toString().toStdWString();
-  return ShellExecuteWrapper(L"open", ws_url.c_str(), nullptr);
+  return Open(url.toString().toStdWString());
 }
 
 Result Execute(const QString& program, const QString& params)
