@@ -447,6 +447,7 @@ Result ExploreDirectory(const QFileInfo& info)
   const auto path = QDir::toNativeSeparators(info.absoluteFilePath());
   const auto ws_path = path.toStdWString();
 
+  // execute the "explore" verb with this file
   return ShellExecuteWrapper(L"explore", ws_path.c_str(), nullptr);
 }
 
@@ -456,7 +457,8 @@ Result ExploreFileInDirectory(const QFileInfo& info)
   const auto params = "/select,\"" + path + "\"";
   const auto ws_params = params.toStdWString();
 
-  return ShellExecuteWrapper(nullptr, L"explore", ws_params.c_str());
+  // run explorer with /select,"path"
+  return ShellExecuteWrapper(nullptr, L"explorer", ws_params.c_str());
 }
 
 
@@ -498,7 +500,7 @@ Result Open(const QString& path)
 
 Result Open(const QUrl& url)
 {
-  return Open(url.toString().toStdWString());
+  return Open(url.toString());
 }
 
 Result Execute(const QString& program, const QString& params)
