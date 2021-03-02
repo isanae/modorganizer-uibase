@@ -19,6 +19,7 @@ add_filter(NAME src/interfaces GROUPS
 	ipluginmodpage
 	ipluginpreview
 	ipluginproxy
+	ipluginrepository
 	iplugintool
 	iprofile
 	isavegame

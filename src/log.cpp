@@ -59,6 +59,7 @@ Levels fromSpdlog(spdlog::level::level_enum lv)
 
     case spdlog::level::info:  // fall-through
     case spdlog::level::off:
+    case spdlog::level::n_levels:
     default:
       return Info;
   }
@@ -402,6 +403,12 @@ std::string converter<QVariant>::convert(const QVariant& v)
     "QVariant(type={}, value='{}')",
     v.typeName(), (v.type() == QVariant::ByteArray ?
       "(binary)" : v.toString().toStdString()));
+}
+
+std::string converter<std::filesystem::path>::convert(
+    const std::filesystem::path& p)
+{
+  return p.string();
 }
 
 

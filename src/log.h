@@ -93,6 +93,12 @@ struct QDLLEXPORT converter<QVariant>
   static std::string convert(const QVariant& v);
 };
 
+template <>
+struct QDLLEXPORT converter<std::filesystem::path>
+{
+  static std::string convert(const std::filesystem::path& p);
+};
+
 
 void QDLLEXPORT doLogImpl(
   spdlog::logger& lg, Levels lv, const std::string& s) noexcept;
@@ -236,6 +242,66 @@ private:
   void createLogger(const std::string& name);
   void addSink(std::shared_ptr<spdlog::sinks::sink> sink);
 };
+
+
+class QDLLEXPORT LogWrapper
+{
+public:
+  LogWrapper(Logger& lg, std::string prefix, bool enabled=true)
+    : m_lg(lg), m_enabled(enabled), m_prefix(std::move(prefix))
+  {
+  }
+
+  void enabled(bool b)
+  {
+    m_enabled = b;
+  }
+
+  bool enabled() const
+  {
+    return m_enabled;
+  }
+
+  template <class F, class... Args>
+  void debug(F&& format, Args&&... args) noexcept
+  {
+    log(Debug, std::forward<F>(format), std::forward<Args>(args)...);
+  }
+
+  template <class F, class... Args>
+  void info(F&& format, Args&&... args) noexcept
+  {
+    log(Info, std::forward<F>(format), std::forward<Args>(args)...);
+  }
+
+  template <class F, class... Args>
+  void warn(F&& format, Args&&... args) noexcept
+  {
+    log(Warning, std::forward<F>(format), std::forward<Args>(args)...);
+  }
+
+  template <class F, class... Args>
+  void error(F&& format, Args&&... args) noexcept
+  {
+    log(Error, std::forward<F>(format), std::forward<Args>(args)...);
+  }
+
+  template <class F, class... Args>
+  void log(Levels lv, F&& format, Args&&... args) noexcept
+  {
+    if (!m_enabled) {
+      return;
+    }
+
+    m_lg.log(lv, m_prefix + std::forward<F>(format), std::forward<Args>(args)...);
+  }
+
+private:
+  Logger& m_lg;
+  bool m_enabled;
+  std::string m_prefix;
+};
+
 
 QDLLEXPORT void createDefault(LoggerConfiguration conf);
 QDLLEXPORT Logger& getDefault();
