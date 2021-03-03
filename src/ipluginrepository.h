@@ -2,6 +2,8 @@
 #define MODORGANIZER_IPLUGINREPOSITORY_INCLUDED
 
 #include <mutex>
+#include <QList>
+#include <QPair>
 #include <filesystem>
 #include "iplugin.h"
 
@@ -25,11 +27,20 @@ public:
     double progress;
   };
 
+  struct Info
+  {
+    QString outputFile;
+    QList<QPair<QString, QString>> headers;
+    QString userAgent;
+  };
+
+
   virtual ~IDownload() = default;
 
   virtual States state() const = 0;
   virtual Stats stats() const = 0;
-  virtual const std::string& buffer() const = 0;
+  virtual QByteArray buffer() const = 0;
+  virtual int httpCode() const = 0;
   virtual void stop() = 0;
 };
 
@@ -40,7 +51,7 @@ public:
   virtual ~IDownloader() = default;
 
   virtual std::shared_ptr<IDownload> add(
-    std::string url, std::filesystem::path file) = 0;
+    const QUrl& url, const IDownload::Info& info={}) = 0;
 };
 
 
